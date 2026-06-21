@@ -403,7 +403,30 @@ kubectl exec -it deploy/springboot-deploy -n secure-mesh -c springboot -- \
 
 > If mTLS is working correctly, the request should succeed because it goes through the Envoy sidecar (which handles mTLS automatically).
 
-#### 5d — Check Istio Configuration
+#### 5d — Test Node.js Service from a Different Namespace
+
+To verify that the `AuthorizationPolicy` blocks unauthorized cross-namespace access, launch a temporary test pod in the `default` namespace and attempt to reach the Node.js service:
+
+```bash
+kubectl run test-client --image=curlimages/curl --rm -it --restart=Never -n default -- \
+  curl http://nodejs-service.secure-mesh.svc.cluster.local:3000/ --max-time 5
+```
+
+**Expected output:**
+
+```
+command terminated with exit code 7
+curl: (7) Failed to connect to nodejs-service.secure-mesh.svc.cluster.local port 3000: Connection refused
+```
+
+> The connection is **blocked** because the `AuthorizationPolicy` on the Node.js service only allows traffic from the `default` service account within the `secure-mesh` namespace. A pod in the `default` namespace does not match the allowed principal (`cluster.local/ns/secure-mesh/sa/default`), so the request is denied by the Envoy sidecar proxy.
+
+This confirms that:
+- ✅ The AuthorizationPolicy is working correctly
+- ✅ The Node.js service is protected from unauthorized cross-namespace access
+- ✅ Only the Spring Boot service within `secure-mesh` can reach the Node.js service
+
+#### 5e — Check Istio Configuration
 
 Verify the mTLS status:
 
