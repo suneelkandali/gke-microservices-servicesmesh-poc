@@ -62,10 +62,13 @@ docker --version
 
 Throughout this guide, replace the following placeholders with your actual values:
 
-- **`<YOUR_GCP_PROJECT_ID>`** — Your Google Cloud project ID → e.g. `gke-mtls-mesh-demo`
+- **`<YOUR_GCP_PROJECT_ID>`** — Your Google Cloud project ID (must be globally unique, lowercase letters/digits/hyphens only) → e.g. `gke-mtls-mesh-demo`
+- **`<YOUR_PROJECT_NAME>`** — A human-readable display name for your project (your choice) → e.g. `GKE mTLS Mesh Demo`
 - **`<YOUR_REGION>`** — GCP region for the GKE cluster → e.g. `us-central1`
 - **`<YOUR_ZONE>`** — GCP zone for the GKE cluster → e.g. `us-central1-a`
 - **`<CLUSTER_NAME>`** — Name of your GKE cluster → e.g. `mesh-demo-cluster`
+
+> **Important:** The `<YOUR_GCP_PROJECT_ID>` must be replaced consistently in **all** commands and **all** files (`k8s/manifests.yaml`, Docker build/push commands, cleanup commands) throughout this guide.
 
 > **Tip:** You can check your current project with `gcloud config get-value project`.
 
@@ -94,10 +97,25 @@ gke-microservices-servicesmesh-poc/
 
 ## Step-by-Step Guide
 
-### Step 1 — Authenticate to Google Cloud
+### Step 1 — Authenticate to Google Cloud and Create a Project
+
+Log in to Google Cloud:
 
 ```bash
 gcloud auth login
+```
+
+Create a new GCP project. The project name is **your choice** — pick any unique name that makes sense for you:
+
+```bash
+gcloud projects create <YOUR_GCP_PROJECT_ID> --name="<YOUR_PROJECT_NAME>"
+```
+
+> **Note:** Replace `<YOUR_GCP_PROJECT_ID>` with a globally unique project ID (e.g. `my-gke-mesh-demo`) and `<YOUR_PROJECT_NAME>` with a human-readable display name (e.g. `GKE mTLS Mesh Demo`). The project ID must be unique across all of Google Cloud and can only contain lowercase letters, digits, and hyphens.
+
+Set the new project as your active project:
+
+```bash
 gcloud config set project <YOUR_GCP_PROJECT_ID>
 ```
 
