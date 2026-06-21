@@ -33,15 +33,10 @@ A complete guide to deploying **two microservices** (Spring Boot + Node.js) on *
 
 1. Install the required local tools (`gcloud`, `kubectl`, `docker`)
 2. Authenticate to Google Cloud and set up your project
-3. Create a GKE cluster (Istio service mesh is already enabled)
-4. Build and push Docker images for both microservices to Google Container Registry (GCR)
-5. Deploy the services to GKE with Kubernetes manifests
-6. Enable Istio sidecar injection in the namespace
-7. Enforce mTLS STRICT mode for all pod-to-pod communication
-8. Apply AuthorizationPolicy for fine-grained service-to-service access control
-9. Verify that inter-service communication works through the mesh
-10. Test that mTLS is enforced (rejects plain-text traffic)
-11. Clean up all cloud resources
+3. Create a GKE cluster, build Docker images, update manifests, and deploy services
+4. Enforce mTLS STRICT mode for all pod-to-pod communication
+5. Verify that inter-service communication works through the mesh
+6. Clean up all cloud resources
 
 ---
 
@@ -126,7 +121,11 @@ gcloud services enable containerregistry.googleapis.com
 
 ---
 
-### Step 3 — Create the GKE Cluster
+### Step 3 — Create GKE Cluster, Build Images, Update Manifests, and Deploy Services
+
+This step covers the complete flow from cluster creation to deployment. Follow the sub-steps in order.
+
+#### 3a — Create the GKE Cluster
 
 Create a standard GKE cluster:
 
@@ -152,9 +151,7 @@ Verify the cluster is running:
 kubectl get nodes
 ```
 
----
-
-### Step 4 — Create the Kubernetes Namespace
+#### 3b — Create the Kubernetes Namespace
 
 Create the `secure-mesh` namespace with Istio sidecar injection enabled:
 
@@ -171,17 +168,15 @@ EOF
 
 > The `istio-injection: enabled` label tells Istio to automatically inject an Envoy sidecar proxy into every pod deployed in this namespace.
 
----
+#### 3c — Build and Push Docker Images
 
-### Step 5 — Build and Push Docker Images
-
-#### 5a — Configure Docker for GCR
+**Configure Docker for GCR:**
 
 ```bash
 gcloud auth configure-docker
 ```
 
-#### 5b — Build and Push the Node.js Service Image
+**Build and Push the Node.js Service Image:**
 
 ```bash
 cd nodejs-service
@@ -205,7 +200,7 @@ EXPOSE 3000
 CMD ["node", "index.js"]
 ```
 
-#### 5c — Build and Push the Spring Boot Service Image
+**Build and Push the Spring Boot Service Image:**
 
 ```bash
 cd springboot-service
@@ -233,11 +228,9 @@ EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
 ```
 
----
+#### 3d — Update Manifests and Deploy Services
 
-### Step 6 — Update Manifests with Your Project ID
-
-Before deploying, update the image references in `k8s/manifests.yaml` with your actual GCP project ID:
+Update the image references in `k8s/manifests.yaml` with your actual GCP project ID:
 
 ```yaml
 # In k8s/manifests.yaml, replace the image paths:
@@ -246,10 +239,6 @@ image: gcr.io/<YOUR_GCP_PROJECT_ID>/springboot-service:1.0.0
 # ... and ...
 image: gcr.io/<YOUR_GCP_PROJECT_ID>/nodejs-service:1.0.0
 ```
-
----
-
-### Step 7 — Deploy Services to GKE
 
 Apply the Kubernetes manifests:
 
@@ -278,7 +267,7 @@ kubectl get pods -n secure-mesh -w
 
 ---
 
-### Step 8 — Enforce mTLS STRICT Mode
+### Step 4 — Enforce mTLS STRICT Mode
 
 Apply the Istio `PeerAuthentication` policy to enforce mutual TLS across the entire namespace:
 
@@ -326,9 +315,9 @@ spec:
 
 ---
 
-### Step 9 — Verify the Setup
+### Step 5 — Verify the Setup
 
-#### 9a — Test Inter-Service Communication
+#### 5a — Test Inter-Service Communication
 
 Port-forward the Spring Boot service to your local machine:
 
@@ -353,7 +342,7 @@ This confirms that:
 - ✅ Spring Boot can reach Node.js via Kubernetes DNS (`http://nodejs-service.secure-mesh.svc.cluster.local:3000/data`)
 - ✅ Istio mTLS is working (traffic between services is encrypted)
 
-#### 9b — Verify mTLS is Enforced
+#### 5b — Verify mTLS is Enforced
 
 Exec into a pod and attempt a plain-text (non-mTLS) connection to the Node.js service:
 
@@ -364,7 +353,7 @@ kubectl exec -it deploy/springboot-deploy -n secure-mesh -c springboot -- \
 
 > If mTLS is working correctly, the request should succeed because it goes through the Envoy sidecar (which handles mTLS automatically).
 
-#### 9c — Check Istio Configuration
+#### 5c — Check Istio Configuration
 
 Verify the mTLS status:
 
@@ -394,7 +383,7 @@ kubectl describe peerauthentication default -n secure-mesh
 
 ---
 
-### Step 10 — Inspect Sidecar Logs
+### Step 6 — Inspect Sidecar Logs
 
 To confirm the Istio sidecar is active, check the logs:
 
