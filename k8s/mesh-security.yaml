@@ -1,0 +1,26 @@
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: secure-mesh
+spec:
+  mtls:
+    # STRICT mode enforces that all communication within the namespace must use mTLS.
+    # Plain text connections are immediately rejected at the proxy sidecar boundary.
+    mode: STRICT
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: nodejs-policy
+  namespace: secure-mesh
+spec:
+  selector:
+    matchLabels:
+      app: nodejs-service
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        # Only allow requests originating from our SpringBoot service account identifier
+        principals: ["cluster.local/ns/secure-mesh/sa/default"]

@@ -1,0 +1,77 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: secure-mesh
+  labels:
+    # This automatically injects the Istio sidecar proxy into our pods
+    istio-injection: enabled
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: springboot-deploy
+  namespace: secure-mesh
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: springboot-service
+  template:
+    metadata:
+      labels:
+        app: springboot-service
+    spec:
+      containers:
+      - name: springboot
+        image: gcr.io/gke-mtls-mesh-demo/springboot-service:1.0.0
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: springboot-service
+  namespace: secure-mesh
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  selector:
+    app: springboot-service
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodejs-deploy
+  namespace: secure-mesh
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nodejs-service
+  template:
+    metadata:
+      labels:
+        app: nodejs-service
+    spec:
+      containers:
+      - name: nodejs
+        image: gcr.io/gke-mtls-mesh-demo/nodejs-service:1.0.0
+        ports:
+        - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nodejs-service
+  namespace: secure-mesh
+spec:
+  ports:
+  - name: http
+    port: 3000
+    targetPort: 3000
+  selector:
+    app: nodejs-service
+  type: ClusterIP
