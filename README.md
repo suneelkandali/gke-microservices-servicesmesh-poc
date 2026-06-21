@@ -335,7 +335,39 @@ spec:
 
 ### Step 5 — Verify the Setup
 
-#### 5a — Test Inter-Service Communication
+#### 5a — Test Node.js Service Call from Spring Boot
+
+First, verify that the Spring Boot service can reach the Node.js service from **within the cluster** using `kubectl exec`:
+
+```bash
+kubectl exec -it deploy/springboot-deploy -n secure-mesh -c springboot -- \
+  curl http://nodejs-service.secure-mesh.svc.cluster.local:3000/ --max-time 5
+```
+
+**Expected output:**
+
+```json
+{"service":"nodejs-service","status":"ok"}
+```
+
+> This confirms that the Spring Boot pod can resolve the Node.js service via Kubernetes DNS (`nodejs-service.secure-mesh.svc.cluster.local`) and receive a response over the Istio service mesh.
+
+Next, test the Spring Boot `/invoke-backend` endpoint which internally calls the Node.js service and returns a combined response:
+
+```bash
+kubectl exec -it deploy/springboot-deploy -n secure-mesh -c springboot -- \
+  curl http://localhost:8080/invoke-backend --max-time 5
+```
+
+**Expected output:**
+
+```
+Spring Boot received: {"service":"nodejs-service","status":"ok"}
+```
+
+> This confirms the full chain: Spring Boot receives the request → calls Node.js via `http://nodejs-service.secure-mesh.svc.cluster.local:3000/data` → returns the combined response.
+
+#### 5b — Test from Your Local Machine (via Port-Forward)
 
 Port-forward the Spring Boot service to your local machine:
 
@@ -352,7 +384,7 @@ curl http://localhost:8080/invoke-backend
 **Expected output:**
 
 ```
-Spring Boot received: { "service": "nodejs-service", "status": "ok" }
+Spring Boot received: {"service":"nodejs-service","status":"ok"}
 ```
 
 This confirms that:
@@ -360,7 +392,7 @@ This confirms that:
 - ✅ Spring Boot can reach Node.js via Kubernetes DNS (`http://nodejs-service.secure-mesh.svc.cluster.local:3000/data`)
 - ✅ Istio mTLS is working (traffic between services is encrypted)
 
-#### 5b — Verify mTLS is Enforced
+#### 5c — Verify mTLS is Enforced
 
 Exec into a pod and attempt a plain-text (non-mTLS) connection to the Node.js service:
 
@@ -371,7 +403,7 @@ kubectl exec -it deploy/springboot-deploy -n secure-mesh -c springboot -- \
 
 > If mTLS is working correctly, the request should succeed because it goes through the Envoy sidecar (which handles mTLS automatically).
 
-#### 5c — Check Istio Configuration
+#### 5d — Check Istio Configuration
 
 Verify the mTLS status:
 
