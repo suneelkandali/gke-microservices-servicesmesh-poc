@@ -27,6 +27,27 @@
 
 A complete guide to deploying **two microservices** (Spring Boot + Node.js) on **Google Kubernetes Engine (GKE)** with **Istio service mesh** for mTLS encryption and fine-grained access control. The Spring Boot service calls the Node.js service via Kubernetes internal DNS, with all traffic secured through Istio's mutual TLS (mTLS).
 
+## Key Concepts
+
+- **Istio Sidecar Injection** — Automatically adds an Envoy proxy container to each pod, intercepting all network traffic
+- **mTLS (mutual TLS)** — Both client and server authenticate each other using certificates, encrypting all traffic
+- **PeerAuthentication** — Istio resource that defines the mTLS mode (STRICT, PERMISSIVE, DISABLE) for a namespace or workload
+- **AuthorizationPolicy** — Istio resource that defines fine-grained access control rules (who can call which service)
+- **ClusterIP Service** — Kubernetes service type that exposes the service only within the cluster (no external access)
+- **Kubernetes DNS** — Services are reachable via `<service-name>.<namespace>.svc.cluster.local:<port>`
+
+---
+
+## Tech Stack
+
+- **Cloud Provider** — Google Cloud Platform (GCP)
+- **Container Orchestration** — Google Kubernetes Engine (GKE)
+- **Service Mesh** — Istio 1.30.1
+- **Frontend API** — Spring Boot 3.2.5 (Java 17)
+- **Backend API** — Node.js 18.x / Express 4.19.2
+- **Container Registry** — Google Container Registry (GCR)
+- **Security** — Istio mTLS STRICT + AuthorizationPolicy
+
 ---
 
 ## What You Will Do
@@ -540,24 +561,3 @@ kubectl logs deploy/nodejs-deploy -n secure-mesh -c istio-proxy | grep -i deny
 This is expected. When mTLS is set to `STRICT`, external plain-text connections are rejected. Always test inter-service communication from within the mesh (via `kubectl exec` or `kubectl port-forward`).
 
 ---
-
-## Key Concepts
-
-- **Istio Sidecar Injection** — Automatically adds an Envoy proxy container to each pod, intercepting all network traffic
-- **mTLS (mutual TLS)** — Both client and server authenticate each other using certificates, encrypting all traffic
-- **PeerAuthentication** — Istio resource that defines the mTLS mode (STRICT, PERMISSIVE, DISABLE) for a namespace or workload
-- **AuthorizationPolicy** — Istio resource that defines fine-grained access control rules (who can call which service)
-- **ClusterIP Service** — Kubernetes service type that exposes the service only within the cluster (no external access)
-- **Kubernetes DNS** — Services are reachable via `<service-name>.<namespace>.svc.cluster.local:<port>`
-
----
-
-## Tech Stack
-
-- **Cloud Provider** — Google Cloud Platform (GCP)
-- **Container Orchestration** — Google Kubernetes Engine (GKE)
-- **Service Mesh** — Istio 1.30.1
-- **Frontend API** — Spring Boot 3.2.5 (Java 17)
-- **Backend API** — Node.js 18.x / Express 4.19.2
-- **Container Registry** — Google Container Registry (GCR)
-- **Security** — Istio mTLS STRICT + AuthorizationPolicy
