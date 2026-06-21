@@ -53,11 +53,12 @@ A complete guide to deploying **two microservices** (Spring Boot + Node.js) on *
 ## What You Will Do
 
 1. Install the required local tools (`gcloud`, `kubectl`, `docker`)
-2. Authenticate to Google Cloud and set up your project
-3. Create a GKE cluster, build Docker images, update manifests, and deploy services
-4. Enforce mTLS STRICT mode for all pod-to-pod communication
-5. Verify that inter-service communication works through the mesh
-6. Clean up all cloud resources
+2. Clone the repository from GitHub
+3. Authenticate to Google Cloud and set up your project
+4. Create a GKE cluster, build Docker images, update manifests, and deploy services
+5. Enforce mTLS STRICT mode for all pod-to-pod communication
+6. Verify that inter-service communication works through the mesh
+7. Clean up all cloud resources
 
 ---
 
@@ -118,7 +119,38 @@ gke-microservices-servicesmesh-poc/
 
 ## Step-by-Step Guide
 
-### Step 1 — Authenticate to Google Cloud and Create a Project
+### Step 1 — Clone the Repository
+
+Clone the project from GitHub:
+
+```bash
+git clone https://github.com/suneelkandali/gke-microservices-servicesmesh-poc.git
+```
+
+Navigate into the project root directory. **All subsequent commands in this guide should be run from this directory:**
+
+```bash
+cd gke-microservices-servicesmesh-poc
+```
+
+Verify the project structure:
+
+```bash
+ls -la
+```
+
+You should see the following directories and files:
+
+```
+k8s/
+nodejs-service/
+springboot-service/
+README.md
+```
+
+---
+
+### Step 2 — Authenticate to Google Cloud and Create a Project
 
 Log in to Google Cloud:
 
@@ -149,7 +181,7 @@ gcloud config get-value project
 
 ---
 
-### Step 2 — Enable Required APIs
+### Step 3 — Enable Required APIs
 
 Enable the GKE and Container Registry APIs:
 
@@ -160,11 +192,11 @@ gcloud services enable containerregistry.googleapis.com
 
 ---
 
-### Step 3 — Create GKE Cluster, Build Images, Update Manifests, and Deploy Services
+### Step 4 — Create GKE Cluster, Build Images, Update Manifests, and Deploy Services
 
 This step covers the complete flow from cluster creation to deployment. Follow the sub-steps in order.
 
-#### 3a — Create the GKE Cluster
+#### 4a — Create the GKE Cluster
 
 Create a standard GKE cluster:
 
@@ -190,7 +222,7 @@ Verify the cluster is running:
 kubectl get nodes
 ```
 
-#### 3b — Create the Kubernetes Namespace
+#### 4b — Create the Kubernetes Namespace
 
 Create the `secure-mesh` namespace with Istio sidecar injection enabled:
 
@@ -207,7 +239,7 @@ EOF
 
 > The `istio-injection: enabled` label tells Istio to automatically inject an Envoy sidecar proxy into every pod deployed in this namespace.
 
-#### 3c — Build and Push Docker Images
+#### 4c — Build and Push Docker Images
 
 **Configure Docker for GCR:**
 
@@ -267,7 +299,7 @@ EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
 ```
 
-#### 3d — Update Manifests and Deploy Services
+#### 4d — Update Manifests and Deploy Services
 
 Update the image references in `k8s/manifests.yaml` with your actual GCP project ID:
 
@@ -306,7 +338,7 @@ kubectl get pods -n secure-mesh -w
 
 ---
 
-### Step 4 — Enforce mTLS STRICT Mode
+### Step 5 — Enforce mTLS STRICT Mode
 
 Apply the Istio `PeerAuthentication` policy to enforce mutual TLS across the entire namespace:
 
@@ -354,9 +386,9 @@ spec:
 
 ---
 
-### Step 5 — Verify the Setup
+### Step 6 — Verify the Setup
 
-#### 5a — Test Node.js Service Call from Spring Boot
+#### 6a — Test Node.js Service Call from Spring Boot
 
 First, verify that the Spring Boot service can reach the Node.js service from **within the cluster** using `kubectl exec`:
 
@@ -388,7 +420,7 @@ Spring Boot received: {"service":"nodejs-service","status":"ok"}
 
 > This confirms the full chain: Spring Boot receives the request → calls Node.js via `http://nodejs-service.secure-mesh.svc.cluster.local:3000/data` → returns the combined response.
 
-#### 5b — Test from Your Local Machine (via Port-Forward)
+#### 6b — Test from Your Local Machine (via Port-Forward)
 
 Port-forward the Spring Boot service to your local machine:
 
@@ -413,7 +445,7 @@ This confirms that:
 - ✅ Spring Boot can reach Node.js via Kubernetes DNS (`http://nodejs-service.secure-mesh.svc.cluster.local:3000/data`)
 - ✅ Istio mTLS is working (traffic between services is encrypted)
 
-#### 5c — Verify mTLS is Enforced
+#### 6c — Verify mTLS is Enforced
 
 Exec into a pod and attempt a plain-text (non-mTLS) connection to the Node.js service:
 
@@ -424,7 +456,7 @@ kubectl exec -it deploy/springboot-deploy -n secure-mesh -c springboot -- \
 
 > If mTLS is working correctly, the request should succeed because it goes through the Envoy sidecar (which handles mTLS automatically).
 
-#### 5d — Test Node.js Service from a Different Namespace
+#### 6d — Test Node.js Service from a Different Namespace
 
 To verify that the `AuthorizationPolicy` blocks unauthorized cross-namespace access, launch a temporary test pod in the `default` namespace and attempt to reach the Node.js service:
 
@@ -447,7 +479,7 @@ This confirms that:
 - ✅ The Node.js service is protected from unauthorized cross-namespace access
 - ✅ Only the Spring Boot service within `secure-mesh` can reach the Node.js service
 
-#### 5e — Check Istio Configuration
+#### 6e — Check Istio Configuration
 
 Verify the mTLS status:
 
@@ -477,7 +509,7 @@ kubectl describe peerauthentication default -n secure-mesh
 
 ---
 
-### Step 6 — Inspect Sidecar Logs
+### Step 7 — Inspect Sidecar Logs
 
 To confirm the Istio sidecar is active, check the logs:
 
